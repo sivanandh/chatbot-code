@@ -1,0 +1,768 @@
+// Setup Restify Server
+var server = restify.createServer();
+
+server.listen(process.env.port || process.env.PORT || 3978, function () {
+    console.log('%s listening to %s', server.name, server.url);
+});
+
+// Create chat connector for communicating with the Bot Framework Service
+var connector = new builder.ChatConnector({
+    appId: xxxxxxxxxxxxx,
+    appPassword: yyyyyyyyyyyyy,
+    openIdMetadata: zzzzzzzzzzzzzz
+});
+
+// Listen for messages from users 
+server.post('/api/messages', connector.listen());
+
+/*----------------------------------------------------------------------------------------
+ * Bot Storage: This is a great spot to register the private state storage for your bot. 
+ * We provide adapters for Azure Table, CosmosDb, SQL Azure, or you can implement your own!
+ * For samples and documentation, see: https://github.com/Microsoft/BotBuilder-Azure
+ * ---------------------------------------------------------------------------------------- */
+
+// var tableName = 'xxxxxxxxxxx';
+// var azureTableClient = new botbuilder_azure.AzureTableClient(tableName, process.env.AzureWebJobsStorage);
+// var tableStorage = new botbuilder_azure.AzureBotStorage({
+//     gzipData: false
+// }, azureTableClient);
+
+var inMemoryStorage = new builder.MemoryBotStorage();
+
+// Create your bot with a function to receive messages from the user
+// var bot = new builder.UniversalBot(connector, function (session, args) {
+//     if (!session.privateConversationData.userInfo) {
+//         session.privateConversationData.userInfo = {};
+//         console.log("initializing privateConversationData.userInfo in default message handler");
+//     }
+//     bot.dialog('/start', intents);
+// });
+
+var bot = new builder.UniversalBot(connector);
+
+var recognizer = new apiairecognizer("xxxxxxxxxxxxxx");
+var intents = new builder.IntentDialog({
+    recognizers: [recognizer]
+});
+
+// bot.set('storage', tableStorage);
+bot.set('storage', inMemoryStorage);
+
+bot.set('localizerSettings', {
+    botLocalePath: __dirname + '/locale',
+    defaultLocale: "en"
+});
+
+
+bot.on('event', function (message) {
+    if (message.name == 'requestWelcomeDialog') {
+        bot.beginDialog(message.address, '/welcomeGif');
+        setTimeout(() => {
+            bot.beginDialog(message.address, '/welcomeSuggested');
+        }, 2000);
+    } else if (message.name == 'buttonClicked') {
+        // bot.reset();
+        // bot.dialogStack(message.address, '/demo',{'value':message.value});
+    }
+});
+
+//say hello to user as he joins
+bot.on('conversationUpdate', function (message) {
+    if (message.membersAdded && message.membersAdded.length > 0) {
+        // console.log(message.membersAdded[0].name);
+        if (message.membersAdded[0].name == "User") {
+            bot.beginDialog(message.address, '/welcomeGif');
+            setTimeout(() => {
+                bot.beginDialog(message.address, '/welcomeSuggested');
+            }, 2000);
+        }
+    }
+});
+
+bot.dialog('/', intents);
+
+intents.onDefault(function (session, args) {
+    if (args.intent == "Default Fallback Intent") {
+        session.send("Sorry...can you please rephrase?");
+    } else if (args.intent == "reask") {
+        if (session.privateConversationData.userInfo.query_type.length > 0 && ["Seeking services", "Just browsing", "Got a query", "Chatbots", "Business Intelligence", "Data Analytics", "Application Development", "Smart Mirror", "Researching about BI", "Just testing the bot", "Exploring "].indexOf(session.privateConversationData.userInfo.query_type) > -1) {
+            session.beginDialog('/reask', {
+                ques: session.privateConversationData.userInfo.query_type
+            });
+        }
+    } else {
+        var fulfillment = builder.EntityRecognizer.findEntity(args.entities, 'fulfillment');
+        if (fulfillment) {
+            var speech = fulfillment.entity;
+            session.send(speech);
+        } else {
+            session.send('Sorry...not sure how to respond to that');
+        }
+    }
+});
+
+intents.matchesAny(["chatbot", "aboutbi", "aboutai", "contactus", "justbrowsing"], function (session, args) {
+    var fulfillment = builder.EntityRecognizer.findEntity(args.entities, 'fulfillment');
+    if (fulfillment) {
+        var speech = fulfillment.entity;
+        session.send(speech);
+    } else {
+        session.send('Sorry...not sure how to respond to that');
+    }
+});
+
+intents.matches("scheduledemo", "/scheduledemo");
+
+bot.dialog('/demorequest', [
+    function (session, args) {
+        delete session.privateConversationData;
+        if (args.value == "hr") {
+            // session.send(content.hrmsg);
+        } else if (args.value == "faq") {
+            // session.send(content.faqmsg);
+        } else if (args.value == "it") {
+            // session.send(content.itmsg);
+        } else if (args.value == "sales") {
+            // session.send(content.salesmsg);
+        }
+
+        if (args.value && args.value != "") {
+            builder.Prompts.text(session, "Cxxxxxxxxxxxxx");
+
+        }
+    },
+    function (session, results) {
+        session.send("xxxxxxxxxxxxxxxxxxxxxxx");
+    }
+]);
+
+bot.dialog("/demo", [
+    function (session, args) {
+        if (args && args.value) {
+            session.replaceDialog("/demorequest", {
+                value: 'it'
+            });
+        }
+    }
+]);
+
+bot.dialog("/scheduledemo", [
+    function (session, args) {
+        if (args && args.value)
+            builder.Prompts.text(session, "xxxxxxxxxxxxxxxxxxxxxxx");
+    },
+    function (session, results) {
+        // console.log("------1888----", results);
+        session.send("xxxxxxxxxxxxxxx");
+        builder.Prompts.choice(session, "xxxxxxxxxxxxxxxxxxxx", {
+            listStyle: builder.ListStyle.button
+        });
+    },
+    function (session, results) {
+        if (results.response.entity == "Yes") {
+            session.beginDialog("/info", {
+                'info': false
+            });
+        } else if (results.response.entity == "No") {
+            session.endDialog("xxxxxxxxxxxxxxxxxxx");
+        }
+    }
+]);
+
+bot.dialog('/welcomeGif', [
+    async function (session, args) {
+        // session.sendTyping();
+        if (!session.privateConversationData.userInfo) {
+            let msg = new builder.Message()
+                // .text(content.welcomeWithGif)
+                .attachments([
+                    new builder.HeroCard(session)
+                    .title(content.welcomeWithGif)
+                    .images([builder.CardImage.create(session, "data:image/jpg;base64," + welcomeGif)])
+                ]);
+            builder.Prompts.text(session, msg);
+        }
+    }
+]);
+
+bot.dialog('/welcomeSuggested', [
+    async function (session, args) {
+        // session.sendTyping();
+        if (!session.privateConversationData.userInfo) {
+
+            var msg2 = new builder.Message(session)
+                .suggestedActions(
+                    builder.SuggestedActions.create(
+                        session, [
+                            builder.CardAction.imBack(session, "Hey!", "Hey!"),
+                            builder.CardAction.imBack(session, "Hello there bot!", "Hello there bot!")
+                        ]
+                    ));
+            session.send(msg2);
+        }
+    }
+]);
+
+bot.dialog('/welcome', [
+    function (session, args) {
+        if (!session.privateConversationData.userInfo) {
+
+            var msg2 = new builder.Message(session)
+                .text('Greetings for the day, what brings you here today?')
+                .suggestedActions(
+                    builder.SuggestedActions.create(
+                        session, [
+                            builder.CardAction.imBack(session, "Seeking services", "Seeking services"),
+                            builder.CardAction.imBack(session, "Just browsing", "Just browsing"),
+                            builder.CardAction.imBack(session, "Got a query", "Got a query")
+                        ]
+                    ));
+            session.privateConversationData.userInfo = {};
+            builder.Prompts.text(session, msg2);
+        }
+    },
+    function (session, results) {
+        session.privateConversationData.userInfo.query_type = results.response;
+
+        if (!('user_email' in session.privateConversationData.userInfo)) {
+            session.beginDialog('/emailPrompt');
+        }
+    },
+    function (session, results) {
+        // console.log('---------2nd func---------');
+        // console.log(results.response.trim());
+        var email = results.response.trim();
+        session.privateConversationData.userInfo.user_email = email;
+        if (session.privateConversationData.userInfo.user_email != "" && session.privateConversationData.userInfo.query_type != "") {
+            session.endDialog();
+            // var dialog = "/"+session.privateConversationData.userInfo.query_type.replace(" ","_");
+
+            session.beginDialog('/' + session.privateConversationData.userInfo.query_type);
+        }
+    }
+]).triggerAction({
+    matches: /^Hello there bot!|Hey!|Hi|Hello|Hi|hi|hello|hi|hi bot|Hi Bot$/i
+});
+
+bot.dialog("/reask", [
+    function (session, args) {
+        // console.log(session.privateConversationData.userInfo.query_type);
+        if (args && args.ques) {
+            session.privateConversationData.userInfo.query_type = "";
+            session.privateConversationData.userInfo.query_type = args.ques;
+            if (["Seeking services", "Just browsing", "Got a query"].indexOf(args.ques) > -1) {
+                session.beginDialog('/' + args.ques);
+            } else if (["Chatbots", "Business Intelligence", "Data Analytics", "Application Development", "Smart Mirror"].indexOf(args.ques) > -1) {
+                session.beginDialog('/seeking_query_type', {
+                    query: args.ques
+                });
+            } else if (["Researching about BI", "Just testing the bot", "Exploring "].indexOf(args.ques) > -1) {
+                session.beginDialog('/browsing_query_type', {
+                    query: args.ques
+                });
+            }
+            session.privateConversationData.userInfo.query_type = "";
+        } else {
+            session.replaceDialog("/");
+        }
+    }
+]);
+
+bot.dialog("/Seeking services", [
+    function (session) {
+        var info = "xxxxxxxxxxxxxxxxxx";
+        let msg = new builder.Message()
+            .attachmentLayout(builder.AttachmentLayout.carousel)
+            .text(info)
+            .attachments([
+                new builder.HeroCard(session)
+                // .title("Chatbots")
+                // .subtitle("")
+                // .text(" Technologies")
+                .images([builder.CardImage.create(session, "data:image/jpg;base64," + chatbotsimg)])
+                .buttons([
+                    builder.CardAction.imBack(session, "Chatbots", "Chatbots")
+                ]),
+                new builder.HeroCard(session)
+                // .title("Application Development")
+                // .subtitle("")
+                // .text(" Technologies")
+                .images([builder.CardImage.create(session, "data:image/jpg;base64," + appImg)])
+                .buttons([
+                    builder.CardAction.imBack(session, "Application Development", "Application Development")
+                ]),
+                new builder.HeroCard(session)
+                // .title("Business Intelligence")
+                // .subtitle("")
+                // .text(" Technologies")
+                .images([builder.CardImage.create(session, "data:image/jpg;base64," + biLinkImg)])
+                .buttons([
+                    builder.CardAction.imBack(session, "Business Intelligence", "Business Intelligence")
+                ]),
+                new builder.HeroCard(session)
+                // .title("Smart Mirror")
+                // .subtitle("")
+                // .text(" Technologies")
+                .images([builder.CardImage.create(session, "data:image/jpg;base64," + smartImg)])
+                .buttons([
+                    builder.CardAction.imBack(session, "Smart Mirror", "Smart Mirror")
+                ]),
+                new builder.HeroCard(session)
+                // .title("Data Analytics")
+                // .subtitle("")
+                // .text(" Technologies")
+                .images([builder.CardImage.create(session, "data:image/jpg;base64," + analyticsImg)])
+                .buttons([
+                    builder.CardAction.imBack(session, "Data Analytics", "Data Analytics")
+                ])
+            ]); // Herocard carousel added by siva
+        builder.Prompts.text(session, msg);
+        session.endDialog();
+    },
+    function (session, results, next) {
+        var seeking_query_type = session.privateConversationData.userInfo.query_type = results.response;
+        if (seeking_query_type && seeking_query_type != "") {
+            session.beginDialog('/seeking_query_type', {
+                query: results.response
+            });
+        } else {
+            next();
+        }
+    }
+]);
+
+bot.dialog("/Just browsing", [
+    function (session, args) {
+        var info = "xxxxxxxxxxxxx";
+        let msg = new builder.Message()
+            .attachmentLayout(builder.AttachmentLayout.carousel)
+            .text(info)
+            .attachments([
+                new builder.HeroCard(session).buttons([
+                    builder.CardAction.imBack(session, "Researching about BI", "Researching about BI"),
+                    builder.CardAction.imBack(session, "Just testing the bot", "Just testing the bot"),
+                    builder.CardAction.imBack(session, "Exploring ", "Exploring ")
+                ])
+            ]); // Herocard carousel added by siva
+        builder.Prompts.text(session, msg);
+    },
+    function (session, results, next) {
+        var browsing_query_type = session.privateConversationData.userInfo.browsing_query_type = results.response;
+        if (browsing_query_type && browsing_query_type != "") {
+            session.beginDialog('/browsing_query_type', {
+                query: results.response
+            });
+        } else {
+            next();
+        }
+    }
+]);
+
+bot.dialog("/Got a query", [
+    function (session) {
+        builder.Prompts.text(session, "xxxxxxxxxxxxx");
+    },
+    function (session, results) {
+        if (results && results.response) {
+            if (["Seeking services", "Just browsing", "Got a query", "Chatbots", "Business Intelligence", "Data Analytics", "Application Development", "Smart Mirror", "Researching about BI", "Just testing the bot", "Exploring "].indexOf(results.response) > -1) {
+                session.privateConversationData.userInfo.browsing_query_type = results.response;
+                session.endDialog();
+                session.beginDialog('/reask', {
+                    ques: results.response
+                });
+            } else {
+                // console.log('---------------Send mail------------');
+                var body = "Email Id : " + session.privateConversationData.userInfo.user_email;
+                var bodytoUser = "Hello there,<br>Your query has been registered and somebody from our team will get in touch with you shortly to resolve and address your query.";
+                var subjectToUser = " Chatbot Service - Query Registered";
+                var subject = session.privateConversationData.userInfo.query_type + " : " + session.message.text;
+                helper.sendMail(subject, body, bodytoUser, subjectToUser); // Mail Sent function
+                session.send("Thank you, somebody from our team will get in touch with you shortly.");
+                // session.endDialog();
+                setTimeout(() => {
+                    session.beginDialog("/can_interest");
+                }, 4000);
+            }
+        }
+    }
+]);
+
+bot.dialog("/can_interest", [
+    function (session) {
+        var info = "Can I interest you in our services:";
+        let msg = new builder.Message()
+            .attachmentLayout(builder.AttachmentLayout.carousel)
+            .text(info)
+            .attachments([
+                new builder.HeroCard(session)
+                // .title("Chatbots")
+                // .subtitle("")
+                // .text(" Technologies")
+                .images([builder.CardImage.create(session, "data:image/jpg;base64," + chatbotsimg)])
+                .buttons([
+                    builder.CardAction.imBack(session, "Chatbots", "Chatbots")
+                ]),
+                new builder.HeroCard(session)
+                // .title("Application Development")
+                // .subtitle("")
+                // .text(" Technologies")
+                .images([builder.CardImage.create(session, "data:image/jpg;base64," + appImg)])
+                .buttons([
+                    builder.CardAction.imBack(session, "Application Development", "Application Development")
+                ]),
+                new builder.HeroCard(session)
+                // .title("Business Intelligence")
+                // .subtitle("")
+                // .text(" Technologies")
+                .images([builder.CardImage.create(session, "data:image/jpg;base64," + biLinkImg)])
+                .buttons([
+                    builder.CardAction.imBack(session, "Business Intelligence", "Business Intelligence")
+                ]),
+                new builder.HeroCard(session)
+                // .title("Smart Mirror")
+                // .subtitle("")
+                // .text(" Technologies")
+                .images([builder.CardImage.create(session, "data:image/jpg;base64," + smartImg)])
+                .buttons([
+                    builder.CardAction.imBack(session, "Smart Mirror", "Smart Mirror")
+                ]),
+                new builder.HeroCard(session)
+                // .title("Data Analytics")
+                // .subtitle("")
+                // .text(" Technologies")
+                .images([builder.CardImage.create(session, "data:image/jpg;base64," + analyticsImg)])
+                .buttons([
+                    builder.CardAction.imBack(session, "Data Analytics", "Data Analytics")
+                ])
+            ]); // Herocard carousel added by siva
+        builder.Prompts.text(session, msg);
+        session.endDialog();
+    },
+    // function (session, results) {
+    //     if (results && results.response) {
+    //         if (["Seeking services", "Just browsing", "Got a query", "Chatbots", "Business Intelligence", "Data Analytics", "Application Development", "Smart Mirror", "Researching about BI", "Just testing the bot", "Exploring "].indexOf(results.response) > -1) {
+    //             session.privateConversationData.userInfo.browsing_query_type = results.response;
+    //             session.endDialog();
+    //             session.beginDialog('/reask', {
+    //                 ques: results.response
+    //             });
+    //         } else {
+    //             // console.log('---------------Send mail------------');
+    //             var body = "Email Id : " + session.privateConversationData.userInfo.user_email;
+    //             var subject = session.privateConversationData.userInfo.query_type + " : " + session.message.text;
+    //             // helper.sendMail(subject, body); // Mail Sent function
+    //             session.send("Thank you, somebody from our team will get in touch with you shortly.");
+    //             session.endDialog();
+    //         }
+    //     }
+    // }
+]);
+
+bot.dialog("/browsing_query_type", [
+    function (session, args) {
+        if (args && args.query) {
+            if (["Researching about BI", "Just testing the bot", "Exploring"].indexOf(args.query) > -1) {
+                if (args.query == "Researching about BI") {
+                    session.send("You&#39;ve come to the right place!");
+                    session.send("xxxxxxxx");
+                    var link1 = `[Solutions](https://xxxxxx.com/solutions)`;
+                    var txt = `Check out more about us and our services here:<br/>${link1}`;
+                    // let msg = new builder.Message().text(txt)
+                    // builder.Prompts.text(session, msg);
+                    var info = "Check out more about us and our services here:";
+                    let msg = new builder.Message()
+                        .text(info)
+                        .attachments([
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + solutionImg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://analytics.com/solutions", "Solutions")
+                            ])
+                        ]); // Herocard carousel added by siva
+                    builder.Prompts.text(session, msg);
+                    // session.endDialog();
+
+                } else if (args.query == "Just testing the bot") {
+
+                    session.send("Happens all the time!");
+                    session.send("Would you be interested in a demo of our chatbot?");
+                    var txt = `It can help you ascertain what bots like me can do for you.<br/>`;
+                    // let msg = new builder.Message()
+                    //     .text(txt)
+                    //     .attachments([
+                    //         new builder.HeroCard(session).buttons([
+                    //             builder.CardAction.imBack(session, "Yes please", "Yes please"),
+                    //             builder.CardAction.imBack(session, "No, I'll pass", "No, I'll pass"),
+                    //         ])
+                    //     ]); // Herocard carousel added by siva
+                    // builder.Prompts.text(session, msg);
+                    var msg2 = new builder.Message(session)
+                        .text('It can help you ascertain what bots like me can do for you.')
+                        .suggestedActions(
+                            builder.SuggestedActions.create(
+                                session, [
+                                    builder.CardAction.imBack(session, "Yes please", "Yes please"),
+                                    builder.CardAction.imBack(session, "No, I'll pass", "No, I'll pass"),
+                                ]
+                            ));
+                    // session.send(msg2);
+                    builder.Prompts.text(session, msg2);
+                } else if (args.query == "Exploring xxxxxxxxxx xx") {
+                    session.send("Sweet! Welcome to xxxxxxxx xx!");
+                    session.send("xxxxxxxxxx");
+                    var link1 = `[Solutions](https://xxxxxxxxxxxx.com/solutions)`;
+                    var txt = `Check out more about us and our services here: <br/> ${link1}`;
+                    // let msg = new builder.Message().text(txt)
+                    // builder.Prompts.text(session, msg);
+                    var info = "Check out more about us and our services here:";
+                    let msg = new builder.Message()
+                        .attachmentLayout(builder.AttachmentLayout.carousel)
+                        .text(info)
+                        .attachments([
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + solutionImg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://xxxxxxxxxxxx.com/solutions", "Solutions")
+                            ])
+                        ]); // Herocard carousel added by siva
+                    builder.Prompts.text(session, msg);
+                    // session.endDialog();
+                }
+
+            } else {
+                session.endDialog();
+                session.beginDialog('/reask', {
+                    ques: args.query
+                });
+            }
+        } else {
+            session.replaceDialog("/");
+        }
+    },
+    function (session, result) {
+
+        if (result.response && result.response != "") {
+            session.endDialog();
+            session.beginDialog("/DemoChoices", {
+                demo_choice: result.response
+            });
+        }
+    }
+]);
+
+bot.dialog("/seeking_query_type", [
+    function (session, args) {
+        if (args && args.query) {
+            if (["Chatbots", "Business Intelligence", "Data Analytics", "Application Development", "Smart Mirror"].indexOf(args.query) > -1) {
+                if (args.query == "Chatbots") {
+                    session.send("We, at xxxxxx, aim at making doing business and businesses better by transforming the way people communicate within and with the brands, one bot at a time.");
+                    var link1 = `[ Chatbots](https://xxxxxxxxxx.com/chatbot)`;
+                    var link2 = `[Visit the superbot factory](https://xxxxxxxxxx.com/)`;
+                    var link3 = `[Explore chatboards](https://xxxxxxxx.com/chatboard)`;
+                    var txt = `You can explore more about our chatbots here:<br/>${link1}<br/>${link2}<br/> ${link3} `;
+                    // let msg = new builder.Message().text(txt)
+                    // builder.Prompts.text(session, msg);
+                    var info = "You can explore more about our chatbots here:";
+                    let msg = new builder.Message()
+                        .attachmentLayout(builder.AttachmentLayout.carousel)
+                        .text(info)
+                        .attachments([
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + chatbotsimg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://xxxxxxxxx.com/", "Chatbots")
+                            ]),
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + superbotImg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://xxxxxxxxxxxx.com/", "The Factory")
+                            ]),
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + chatboardImg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://xxxxxxxxxxxxx.com/", "Explore chatboards")
+                            ])
+                        ]); // Herocard carousel added by siva
+                    builder.Prompts.text(session, msg);
+                    session.endDialog();
+
+                } else if (args.query == "Business Intelligence") {
+
+                    session.send("xxxxxxxxxxxxxxxx");
+                    var link1 = `[Business Intelligence](https://xxxxxxxxxxxxx.com/business_Intelligence)`;
+                    var link2 = `[ETL as a Service](https://xxxxxxxxxxxxxx.com/etl)`;
+                    var link3 = `[Biz-i Dashboards](https://xxxxxxxxxxxx.com/dashboarding)`;
+                    var txt = `You can explore our BI services here::<br/> ${link1}<br/> ${link2}<br/> ${link3} `;
+                    // let msg = new builder.Message().text(txt)
+                    // builder.Prompts.text(session, msg);
+                    var info = "You can explore our BI services here:";
+                    let msg = new builder.Message()
+                        .attachmentLayout(builder.AttachmentLayout.carousel)
+                        .text(info)
+                        .attachments([
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + biLinkImg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://xxxxxxxxxxx.com/business_Intelligence", "Business Intelligence")
+                            ]),
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + etlImg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://xxxxxxxxxxxxx.com/etl", "ETL as a Service")
+                            ]),
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + dashboardingImg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://xxxxxxxxxxxxx.com/dashboarding", "Biz-i Dashboards")
+                            ])
+                        ]); // Herocard carousel added by siva
+                    builder.Prompts.text(session, msg);
+                    session.endDialog();
+
+                } else if (args.query == "Data Analytics") {
+
+                    session.send("xxxxxxxxxxxxxxxxx");
+                    var link1 = `[Data Analytics](https://xxxxxxxxxxxxxxxxx.com/analytics)`;
+                    var txt = `Explore our data analytics services here: <br/> ${link1}`;
+                    var info = "Explore our data analytics services here:";
+                    let msg = new builder.Message()
+                        .text(info)
+                        .attachments([
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + analyticsImg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://xxxxxxxxxxxxxxxxxx.com/analytics", "Data Analytics")
+                            ])
+                        ]); // Herocard carousel added by siva
+                    builder.Prompts.text(session, msg);
+                    session.endDialog();
+
+                } else if (args.query == "Application Development") {
+
+                    session.send("xxxxxxxxxxxxxxxx");
+                    var link1 = `[Application Development Lifecycle](https://xxxxxxxxxxxxxxxx.com/application_development)`;
+                    var txt = `Learn more about our ADLC services here: <br/> ${link1}`;
+                    var info = "Learn more about our ADLC services here:";
+                    let msg = new builder.Message()
+                        .text(info)
+                        .attachments([
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + appImg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://xxxxxxxxxxxxx.com/application_development", "Application Development Lifecycle")
+                            ])
+                        ]); // Herocard carousel added by siva
+                    builder.Prompts.text(session, msg);
+                    session.endDialog();
+
+                } else if (args.query == "Smart Mirror") {
+
+                    session.send("xxxxxxxxxxxxxxx");
+                    var link1 = `[ Smart Mirror](https://xxxxxxxx.com/)`;
+                    var txt = `xxxxxxx: <br/> ${link1} `;
+                    
+                    var info = "xxxxxxxxxxx:";
+                    let msg = new builder.Message()
+                        .text(info)
+                        .attachments([
+                            new builder.HeroCard(session)
+                            .images([builder.CardImage.create(session, "data:image/jpg;base64," + smartImg)])
+                            .buttons([
+                                builder.CardAction.openUrl(session, "https://xxxx.com/", "Mirror")
+                            ])
+                        ]); // Herocard carousel added by siva
+                    builder.Prompts.text(session, msg);
+                    session.endDialog();
+
+                }
+
+            } else {
+                session.endDialog();
+                session.beginDialog('/reask', {
+                    ques: args.query
+                });
+            }
+        } else {
+            session.replaceDialog("/");
+        }
+    }
+]);
+
+bot.dialog('/emailPrompt', [
+    function (session, args) {
+        if (args && args.reprompt) {
+            builder.Prompts.text(session, "Please enter the valid email address");
+        } else {
+            builder.Prompts.text(session, content.user_welcome);
+
+        }
+    },
+    function (session, results) {
+
+        if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(findEmails(results.response.trim())[0])) {
+            session.endDialogWithResult({
+                response: results.response.trim()
+            });
+        } else {
+            session.replaceDialog('/emailPrompt', {
+                reprompt: true
+            });
+        }
+    }
+]);
+
+bot.dialog('/DemoChoices', [
+    function (session, args) {
+        if (args.demo_choice && args.demo_choice == "Yes please") {
+            var txt = `Yes please`;
+            let msg = new builder.Message().text(txt)
+            session.send("You are on the right track. Somebody from our team will get to you shortly for a detailed demo. Happy browsing!");
+            if (session.privateConversationData.userInfo.user_email != "") {
+                var body = "Email Id : " + session.privateConversationData.userInfo.user_email;
+                var subject = "Schedule a demo for chatbot";
+                var bodytoUser = "xxxxxxxxxxxxxx";
+                var subjectToUser = "xxxxxxxxxxx";
+                // console.log("---------------send mail---------------------");
+            }
+
+            // session.endDialog();
+            setTimeout(() => {
+                session.beginDialog("/can_interest");
+            }, 4000);
+        } else if (args.demo_choice && args.demo_choice == "No, I'll pass") {
+
+            var txt = `No, I'll pass`;
+            let msg = new builder.Message().text(txt)
+
+            session.send("Oh! I see. Hope you have a good time browsing the site.");
+            // session.endDialog();
+            setTimeout(() => {
+                session.beginDialog("/can_interest");
+            }, 4000);
+        } else {
+            session.endDialog();
+            session.replaceDialog("/");
+        }
+    }
+]);
+
+bot.use({
+    botbuilder: function (session, next) {
+        session.sendTyping();
+        if (session.message.text && session.message.text != undefined && ["Seeking services", "Just browsing", "Got a query", "Chatbots", "Business Intelligence", "Data Analytics", "Application Development", "Smart Mirror", "Researching about BI", "Just testing the bot", "Exploring "].indexOf(session.message.text) > -1) {
+            session.privateConversationData.userInfo.query_type = "";
+            session.privateConversationData.userInfo.query_type = session.message.text;
+        }
+        next();
+    },
+    receive: function (event, next) {
+        /* User Messages */
+        helper.getuserLogging(event);
+        next();
+    },
+    send: function (event, next) {
+        /* Bot Messages */
+        helper.getbotLogging(event);
+        next();
+    }
+});
