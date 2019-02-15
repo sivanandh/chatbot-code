@@ -229,8 +229,7 @@ bot.dialog('/welcome', [
         }
     },
     function (session, results) {
-        // console.log('---------2nd func---------');
-        // console.log(results.response.trim());
+        
         var email = results.response.trim();
         session.privateConversationData.userInfo.user_email = email;
         if (session.privateConversationData.userInfo.user_email != "" && session.privateConversationData.userInfo.query_type != "") {
@@ -246,7 +245,7 @@ bot.dialog('/welcome', [
 
 bot.dialog("/reask", [
     function (session, args) {
-        // console.log(session.privateConversationData.userInfo.query_type);
+        
         if (args && args.ques) {
             session.privateConversationData.userInfo.query_type = "";
             session.privateConversationData.userInfo.query_type = args.ques;
@@ -276,41 +275,26 @@ bot.dialog("/Seeking services", [
             .text(info)
             .attachments([
                 new builder.HeroCard(session)
-                // .title("Chatbots")
-                // .subtitle("")
-                // .text(" Technologies")
                 .images([builder.CardImage.create(session, "data:image/jpg;base64," + chatbotsimg)])
                 .buttons([
                     builder.CardAction.imBack(session, "Chatbots", "Chatbots")
                 ]),
                 new builder.HeroCard(session)
-                // .title("Application Development")
-                // .subtitle("")
-                // .text(" Technologies")
                 .images([builder.CardImage.create(session, "data:image/jpg;base64," + appImg)])
                 .buttons([
                     builder.CardAction.imBack(session, "Application Development", "Application Development")
                 ]),
                 new builder.HeroCard(session)
-                // .title("Business Intelligence")
-                // .subtitle("")
-                // .text(" Technologies")
                 .images([builder.CardImage.create(session, "data:image/jpg;base64," + biLinkImg)])
                 .buttons([
                     builder.CardAction.imBack(session, "Business Intelligence", "Business Intelligence")
                 ]),
                 new builder.HeroCard(session)
-                // .title("Smart Mirror")
-                // .subtitle("")
-                // .text(" Technologies")
                 .images([builder.CardImage.create(session, "data:image/jpg;base64," + smartImg)])
                 .buttons([
                     builder.CardAction.imBack(session, "Smart Mirror", "Smart Mirror")
                 ]),
                 new builder.HeroCard(session)
-                // .title("Data Analytics")
-                // .subtitle("")
-                // .text(" Technologies")
                 .images([builder.CardImage.create(session, "data:image/jpg;base64," + analyticsImg)])
                 .buttons([
                     builder.CardAction.imBack(session, "Data Analytics", "Data Analytics")
@@ -395,41 +379,26 @@ bot.dialog("/can_interest", [
             .text(info)
             .attachments([
                 new builder.HeroCard(session)
-                // .title("Chatbots")
-                // .subtitle("")
-                // .text(" Technologies")
                 .images([builder.CardImage.create(session, "data:image/jpg;base64," + chatbotsimg)])
                 .buttons([
                     builder.CardAction.imBack(session, "Chatbots", "Chatbots")
                 ]),
                 new builder.HeroCard(session)
-                // .title("Application Development")
-                // .subtitle("")
-                // .text(" Technologies")
                 .images([builder.CardImage.create(session, "data:image/jpg;base64," + appImg)])
                 .buttons([
                     builder.CardAction.imBack(session, "Application Development", "Application Development")
                 ]),
                 new builder.HeroCard(session)
-                // .title("Business Intelligence")
-                // .subtitle("")
-                // .text(" Technologies")
                 .images([builder.CardImage.create(session, "data:image/jpg;base64," + biLinkImg)])
                 .buttons([
                     builder.CardAction.imBack(session, "Business Intelligence", "Business Intelligence")
                 ]),
                 new builder.HeroCard(session)
-                // .title("Smart Mirror")
-                // .subtitle("")
-                // .text(" Technologies")
                 .images([builder.CardImage.create(session, "data:image/jpg;base64," + smartImg)])
                 .buttons([
                     builder.CardAction.imBack(session, "Smart Mirror", "Smart Mirror")
                 ]),
                 new builder.HeroCard(session)
-                // .title("Data Analytics")
-                // .subtitle("")
-                // .text(" Technologies")
                 .images([builder.CardImage.create(session, "data:image/jpg;base64," + analyticsImg)])
                 .buttons([
                     builder.CardAction.imBack(session, "Data Analytics", "Data Analytics")
@@ -438,24 +407,7 @@ bot.dialog("/can_interest", [
         builder.Prompts.text(session, msg);
         session.endDialog();
     },
-    // function (session, results) {
-    //     if (results && results.response) {
-    //         if (["Seeking services", "Just browsing", "Got a query", "Chatbots", "Business Intelligence", "Data Analytics", "Application Development", "Smart Mirror", "Researching about BI", "Just testing the bot", "Exploring "].indexOf(results.response) > -1) {
-    //             session.privateConversationData.userInfo.browsing_query_type = results.response;
-    //             session.endDialog();
-    //             session.beginDialog('/reask', {
-    //                 ques: results.response
-    //             });
-    //         } else {
-    //             // console.log('---------------Send mail------------');
-    //             var body = "Email Id : " + session.privateConversationData.userInfo.user_email;
-    //             var subject = session.privateConversationData.userInfo.query_type + " : " + session.message.text;
-    //             // helper.sendMail(subject, body); // Mail Sent function
-    //             session.send("Thank you, somebody from our team will get in touch with you shortly.");
-    //             session.endDialog();
-    //         }
-    //     }
-    // }
+    
 ]);
 
 bot.dialog("/browsing_query_type", [
@@ -487,15 +439,7 @@ bot.dialog("/browsing_query_type", [
                     session.send("Happens all the time!");
                     session.send("Would you be interested in a demo of our chatbot?");
                     var txt = `It can help you ascertain what bots like me can do for you.<br/>`;
-                    // let msg = new builder.Message()
-                    //     .text(txt)
-                    //     .attachments([
-                    //         new builder.HeroCard(session).buttons([
-                    //             builder.CardAction.imBack(session, "Yes please", "Yes please"),
-                    //             builder.CardAction.imBack(session, "No, I'll pass", "No, I'll pass"),
-                    //         ])
-                    //     ]); // Herocard carousel added by siva
-                    // builder.Prompts.text(session, msg);
+                    
                     var msg2 = new builder.Message(session)
                         .text('It can help you ascertain what bots like me can do for you.')
                         .suggestedActions(
@@ -512,8 +456,7 @@ bot.dialog("/browsing_query_type", [
                     session.send("xxxxxxxxxx");
                     var link1 = `[Solutions](https://xxxxxxxxxxxx.com/solutions)`;
                     var txt = `Check out more about us and our services here: <br/> ${link1}`;
-                    // let msg = new builder.Message().text(txt)
-                    // builder.Prompts.text(session, msg);
+                    
                     var info = "Check out more about us and our services here:";
                     let msg = new builder.Message()
                         .attachmentLayout(builder.AttachmentLayout.carousel)
